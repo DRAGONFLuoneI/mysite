@@ -4,35 +4,168 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Наш уголок</title>
-  <style>
-    body { margin:0; padding:0; height:100vh; background:linear-gradient(135deg,#1e1e2e,#2a2a40); color:#fff; font-family:Segoe UI,sans-serif; overflow:hidden; }
-    #loginScreen { height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; }
-    input, button { padding:16px; margin:10px; width:320px; border-radius:12px; font-size:1.1rem; }
-    button { background:#00ffcc; color:#000; font-weight:bold; cursor:pointer; border:none; }
-    .tab { flex:1; padding:18px; text-align:center; cursor:pointer; }
-    .tab.active { background:#00cc99; color:#000; font-weight:bold; }
-    .content-area { flex:1; overflow-y:auto; padding:20px; }
-    .message { margin:12px 0; padding:14px 18px; border-radius:18px; max-width:75%; background:#3a3a50; }
-    .message.self { margin-left:auto; background:#00cc99; color:#000; }
-    .question-card { background:#2a2a40; padding:18px; margin:15px 0; border-radius:12px; }
-    #chatInputContainer { position:fixed; bottom:0; left:0; right:0; background:#1e1e2e; padding:12px; display:flex; gap:10px; }
-    #chatInput { flex:1; padding:16px; border-radius:25px; border:none; background:#2a2a40; color:white; font-size:1.1rem; }
+<style>
+    :root {
+      --bg: #0a0a0a;
+      --card: #111111;
+      --accent: #00ffcc;
+      --text: #ffffff;
+      --text2: #aaaaaa;
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
+      height: 100vh;
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Segoe UI', sans-serif;
+      overflow: hidden;
+    }
+
+    #loginScreen {
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: radial-gradient(circle at center, #1a1a1a, #0a0a0a);
+    }
+
+    input, button {
+      padding: 16px 20px;
+      margin: 12px;
+      width: 340px;
+      border-radius: 12px;
+      font-size: 1.1rem;
+      transition: all 0.3s;
+    }
+
+    input {
+      background: #1f1f1f;
+      border: 1px solid #333;
+      color: white;
+    }
+
+    input:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 15px rgba(0, 255, 204, 0.3);
+    }
+
+    button {
+      background: var(--accent);
+      color: black;
+      font-weight: bold;
+      border: none;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background: #00ffaa;
+      transform: translateY(-2px);
+      box-shadow: 0 0 20px rgba(0, 255, 204, 0.5);
+    }
+
+    .tab {
+      flex: 1;
+      padding: 20px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.3s;
+      border-bottom: 3px solid transparent;
+    }
+
+    .tab:hover {
+      background: #1f1f1f;
+    }
+
+    .tab.active {
+      background: #1a1a1a;
+      border-bottom: 3px solid var(--accent);
+      color: var(--accent);
+      box-shadow: 0 4px 15px rgba(0, 255, 204, 0.2);
+    }
+
+    .content-area {
+      flex: 1;
+      overflow-y: auto;
+      padding: 25px;
+      background: var(--bg);
+    }
+
+    .message {
+      margin: 15px 0;
+      padding: 16px 20px;
+      border-radius: 18px;
+      max-width: 75%;
+      background: #1f1f1f;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+    }
+
+    .message.self {
+      margin-left: auto;
+      background: linear-gradient(135deg, #00cc99, #00ffcc);
+      color: black;
+    }
+
+    .question-card {
+      background: var(--card);
+      padding: 20px;
+      margin: 18px 0;
+      border-radius: 16px;
+      border: 1px solid #222;
+      transition: all 0.3s;
+    }
+
+    .question-card:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 0 25px rgba(0, 255, 204, 0.15);
+      border-color: var(--accent);
+    }
+
+    #chatInputContainer {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: #0a0a0a;
+      padding: 15px;
+      display: flex;
+      gap: 12px;
+      box-shadow: 0 -10px 30px rgba(0,0,0,0.8);
+    }
+
+    #chatInput {
+      flex: 1;
+      padding: 18px;
+      border-radius: 30px;
+      background: #1f1f1f;
+      border: 1px solid #333;
+      color: white;
+    }
+
+    #chatInput:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 20px rgba(0, 255, 204, 0.3);
+    }
   </style>
 </head>
 <body>
 
   <!-- ЛОГИН -->
   <div id="loginScreen">
-    <h1>Вход в наш уголок</h1>
+    <h1 style="font-size:2.8rem;margin-bottom:10px;">Наш уголок</h1>
+    <p style="color:#888;margin-bottom:30px;">Только для нас двоих</p>
     <input id="username" placeholder="Логин (kanuka / ToRo)"><br>
     <input id="password" type="password" placeholder="Пароль"><br>
     <button onclick="tryLogin()">Войти</button>
-    <p id="errorMsg" style="color:#ff6666;"></p>
+    <p id="errorMsg" style="color:#ff6666;margin-top:15px;"></p>
   </div>
 
   <!-- Главный интерфейс -->
   <div id="mainApp" style="display:none; height:100%; flex-direction:column;">
-    <div class="tabs" id="tabsContainer"></div>
+    <div class="tabs" id="tabsContainer" style="display:flex;background:#111;"></div>
 
     <div class="content-area" id="chatArea"></div>
     <div class="content-area" id="questionsArea" style="display:none;"></div>
@@ -42,7 +175,7 @@
 
     <div id="chatInputContainer">
       <input id="chatInput" placeholder="Напиши сообщение..." onkeypress="if(event.key==='Enter') sendMessage()">
-      <button onclick="sendMessage()">Отправить</button>
+      <button onclick="sendMessage()">→</button>
     </div>
   </div>
 
@@ -50,15 +183,14 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/12.3.0/firebase-firestore-compat.min.js"></script>
 
 <script>
-// ==================== ТВОЙ FIREBASE CONFIG ====================
+// ==================== ТВОЙ CONFIG ====================
 const firebaseConfig = {
   apiKey: "AIzaSyDUWb_6ECRRlCGTTGSrIlfWmmH2D1pEXco",
   authDomain: "lalalala-6d0e2.firebaseapp.com",
   projectId: "lalalala-6d0e2",
   storageBucket: "lalalala-6d0e2.firebasestorage.app",
   messagingSenderId: "85748390082",
-  appId: "1:85748390082:web:2f2fecf37e89527f12035b",
-  measurementId: "G-YFFVE79Y4T"
+  appId: "1:85748390082:web:2f2fecf37e89527f12035b"
 };
 
 firebase.initializeApp(firebaseConfig);
