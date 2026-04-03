@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Наш уголок</title>
+  <style>
+    body { margin:0; padding:0; height:100vh; background:linear-gradient(135deg,#1e1e2e,#2a2a40); color:#fff; font-family:Segoe UI,sans-serif; overflow:hidden; }
+    #loginScreen { height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; }
+    input, button { padding:16px; margin:10px; width:320px; border-radius:12px; font-size:1.1rem; }
+    button { background:#00ffcc; color:#000; font-weight:bold; cursor:pointer; border:none; }
+    .tab { flex:1; padding:18px; text-align:center; cursor:pointer; }
+    .tab.active { background:#00cc99; color:#000; font-weight:bold; }
+    .content-area { flex:1; overflow-y:auto; padding:20px; }
+    .message { margin:12px 0; padding:14px 18px; border-radius:18px; max-width:75%; background:#3a3a50; }
+    .message.self { margin-left:auto; background:#00cc99; color:#000; }
+    .question-card { background:#2a2a40; padding:18px; margin:15px 0; border-radius:12px; }
+    #chatInputContainer { position:fixed; bottom:0; left:0; right:0; background:#1e1e2e; padding:12px; display:flex; gap:10px; }
+    #chatInput { flex:1; padding:16px; border-radius:25px; border:none; background:#2a2a40; color:white; font-size:1.1rem; }
+  </style>
+</head>
+<body>
+
+  <!-- ЛОГИН -->
+  <div id="loginScreen">
+    <h1>Вход в наш уголок</h1>
+    <input id="username" placeholder="Логин (kanuka / ToRo)"><br>
+    <input id="password" type="password" placeholder="Пароль"><br>
+    <button onclick="tryLogin()">Войти</button>
+    <p id="errorMsg" style="color:#ff6666;"></p>
+  </div>
+
+  <!-- Главный интерфейс -->
+  <div id="mainApp" style="display:none; height:100%; flex-direction:column;">
+    <div class="tabs" id="tabsContainer"></div>
+
+    <div class="content-area" id="chatArea"></div>
+    <div class="content-area" id="questionsArea" style="display:none;"></div>
+    <div class="content-area" id="testArea" style="display:none;"></div>
+    <div class="content-area" id="resultsArea" style="display:none;"></div>
+    <div class="content-area" id="monitorArea" style="display:none;"></div>
+
+    <div id="chatInputContainer">
+      <input id="chatInput" placeholder="Напиши сообщение..." onkeypress="if(event.key==='Enter') sendMessage()">
+      <button onclick="sendMessage()">Отправить</button>
+    </div>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/12.3.0/firebase-app-compat.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/12.3.0/firebase-firestore-compat.min.js"></script>
+
+<script>
+// ==================== ТВОЙ FIREBASE CONFIG ====================
+const firebaseConfig = {
+  apiKey: "AIzaSyDUWb_6ECRRlCGTTGSrIlfWmmH2D1pEXco",
+  authDomain: "lalalala-6d0e2.firebaseapp.com",
+  projectId: "lalalala-6d0e2",
+  storageBucket: "lalalala-6d0e2.firebasestorage.app",
+  messagingSenderId: "85748390082",
+  appId: "1:85748390082:web:2f2fecf37e89527f12035b",
+  measurementId: "G-YFFVE79Y4T"
+};
+
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+
+let currentUser = null;
+
+// ==================== ЛОГИН ====================
+window.tryLogin = function() {
+  const username = document.getElementById('username').value.trim();
+  const password = document.getElementById('password').value.trim();
+  const errorMsg = document.getElementById('errorMsg');
+
+  errorMsg.textContent = '';
+
+  if ((username === "kanuka" || username === "ToRo") && password === "251024") {
+    currentUser = username;
+    localStorage.setItem('currentUser', username);
+    document.getElementById('loginScreen').style.display = 'none';
+    document.getElementById('mainApp').style.display = 'flex';
+    initApp();
+  } else {
+    errorMsg.textContent = 'Неверный логин или пароль';
+  }
+};
+
+function initApp() {
+  createTabs();
+  showTab(0);
+  loadMessages();
+  loadQuestions();
+  if (currentUser === "kanuka") loadResults();
+  if (currentUser === "ToRo") startMonitoring();
+}
+
+// ==================== ТАБЫ ====================
+function createTabs() {
+  const tabs = [
+    {name: "💬 Чат", idx: 0},
+    {name: "❓ Вопросы", idx: 1},
+    {name: "✅ Тест", idx: 2},
+    {name: currentUser === "kanuka" ? "📊 Результаты" : "📜 Мои ответы", idx: 3}
+  ];
+  if (currentUser === "ToRo") tabs.push({name: "👀 Мониторинг", idx: 4});
+
+  const container = document.getElementById('tabsContainer');
+  container.innerHTML = '';
+  tabs.forEach(t => {
+    const div = document.createElement('div');
+    div.className = 'tab';
+    div.textContent = t.name;
+    div.onclick = () => showTab(t.idx);
+    container.appendChild(div);
+  });
+}
+
+function showTab(n) {
+  document.querySelectorAll('.tab').forEach((tab, i) => tab.classList.toggle('active', i === n));
+  document.getElementById('chatArea').style.display = n===0 ? 'block' : 'none';
+  document.getElementById('questionsArea').style.display = n===1 ? 'block' : 'none';
+  document.getElementById('testArea').style.display = n===2 ? 'block' : 'none';
+  document.getElementById('resultsArea').style.display = n===3 ? 'block' : 'none';
+  document.getElementById('monitorArea').style.display = n===4 ? 'block' : 'none';
+
+  if (n === 2) loadTest();
+  if (n === 3 && currentUser === "ToRo") loadMyAnswers();
+}
+
+// ==================== ЧАТ ====================
+function loadMessages() {
+  const area = document.getElementById('chatArea');
+  db.collection('messages').orderBy('timestamp').onSnapshot(snap => {
+    area.innerHTML = '';
+    snap.forEach(doc => {
+      const m = doc.data();
+      const div = document.createElement('div');
+      div.className = `message ${m.user === currentUser ? 'self' : ''}`;
+      div.innerHTML = `<small><b>${m.user}</b> • ${m.timestamp?.toDate().toLocaleTimeString()}</small><br>${m.text}`;
+      area.appendChild(div);
+    });
+    area.scrollTop = area.scrollHeight;
+  });
+}
+
+window.sendMessage = function() {
+  const input = document.getElementById('chatInput');
+  const text = input.value.trim();
+  if (!text) return;
+  db.collection('messages').add({ user: currentUser, text, timestamp: firebase.firestore.FieldValue.serverTimestamp() });
+  input.value = '';
+};
+
+// ==================== ВОПРОСЫ ====================
+function loadQuestions() {
+  const area = document.getElementById('questionsArea');
+  area.innerHTML = `<h2>Добавить новый вопрос</h2>
+    <input id="newQ" style="width:90%;padding:15px;" placeholder="Текст вопроса">
+    <button onclick="addQuestion()" style="width:90%;">Добавить вопрос</button>
+    <h3>Список вопросов:</h3><div id="qlist"></div>`;
+
+  db.collection('questions').orderBy('timestamp').onSnapshot(snap => {
+    const list = document.getElementById('qlist');
+    list.innerHTML = '';
+    snap.forEach(doc => {
+      const q = doc.data();
+      const div = document.createElement('div');
+      div.className = 'question-card';
+      div.innerHTML = `<strong>${q.question}</strong><br><small>от ${q.createdBy}</small>`;
+      list.appendChild(div);
+    });
+  });
+}
+
+window.addQuestion = function() {
+  const text = document.getElementById('newQ').value.trim();
+  if (!text) return;
+  db.collection('questions').add({ question: text, createdBy: currentUser, timestamp: firebase.firestore.FieldValue.serverTimestamp() });
+  document.getElementById('newQ').value = '';
+};
+
+// ==================== ТЕСТ ====================
+let currentTest = [];
+function loadTest() {
+  const area = document.getElementById('testArea');
+  area.innerHTML = `<h2>Пройти тест</h2><div id="testContent"></div><button onclick="submitAnswers()" style="width:90%;margin:20px auto;display:block;">Отправить все ответы</button>`;
+
+  db.collection('questions').get().then(snap => {
+    currentTest = [];
+    const cont = document.getElementById('testContent');
+    cont.innerHTML = '';
+    snap.forEach(doc => {
+      const q = doc.data();
+      currentTest.push({id: doc.id, ...q});
+      const div = document.createElement('div');
+      div.className = 'question-card';
+      div.innerHTML = `<p><strong>${currentTest.length}. ${q.question}</strong></p>
+                       <input type="text" id="ans-${doc.id}" style="width:100%;padding:14px;" placeholder="Твой ответ">`;
+      cont.appendChild(div);
+    });
+  });
+}
+
+window.submitAnswers = function() {
+  currentTest.forEach(q => {
+    const ans = document.getElementById(`ans-${q.id}`).value.trim();
+    if (ans) {
+      db.collection('userAnswers').add({ questionText: q.question, user: currentUser, answer: ans, timestamp: firebase.firestore.FieldValue.serverTimestamp() });
+    }
+  });
+  alert("✅ Ответы отправлены!");
+};
+
+// ==================== РЕЗУЛЬТАТЫ ====================
+function loadResults() {
+  const area = document.getElementById('resultsArea');
+  area.innerHTML = `<h2>Результаты ответов ToRo</h2><div id="resList"></div>`;
+  db.collection('userAnswers').orderBy('timestamp','desc').onSnapshot(snap => {
+    const list = document.getElementById('resList');
+    list.innerHTML = '';
+    snap.forEach(doc => {
+      const a = doc.data();
+      const div = document.createElement('div');
+      div.className = 'question-card';
+      div.innerHTML = `<strong>${a.questionText}</strong><br><b>ToRo ответил:</b> ${a.answer}`;
+      list.appendChild(div);
+    });
+  });
+}
+
+function loadMyAnswers() {
+  const area = document.getElementById('resultsArea');
+  area.innerHTML = `<h2>Мои предыдущие ответы</h2><div id="myList"></div>`;
+  db.collection('userAnswers').where('user','==','ToRo').orderBy('timestamp','desc').onSnapshot(snap => {
+    const list = document.getElementById('myList');
+    list.innerHTML = '';
+    snap.forEach(doc => {
+      const a = doc.data();
+      const div = document.createElement('div');
+      div.className = 'question-card';
+      div.innerHTML = `<strong>${a.questionText}</strong><br><b>Ответ:</b> ${a.answer}`;
+      list.appendChild(div);
+    });
+  });
+}
+
+// ==================== МОНИТОРИНГ ====================
+function startMonitoring() {
+  const area = document.getElementById('monitorArea');
+  area.innerHTML = `<h2>👀 Что пишет kanuka прямо сейчас</h2><div id="liveText" style="padding:25px;background:#2a2a40;border-radius:15px;font-size:1.3rem;min-height:150px;"></div>`;
+  db.collection('typing').doc('kanuka').onSnapshot(doc => {
+    document.getElementById('liveText').textContent = doc.data()?.text || "Пока ничего не пишет...";
+  });
+}
+
+document.getElementById('chatInput').addEventListener('input', () => {
+  if (currentUser === "kanuka") {
+    db.collection('typing').doc('kanuka').set({text: document.getElementById('chatInput').value});
+  }
+});
+
+// Автовход
+if (localStorage.getItem('currentUser')) {
+  currentUser = localStorage.getItem('currentUser');
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('mainApp').style.display = 'flex';
+  initApp();
+}
+</script>
+</body>
+</html>
